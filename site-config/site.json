@@ -11,6 +11,18 @@
       "email": "admin@example.com"
     }
   },
+  "theme": {
+    "source": "builtin",
+    "slug": "ai-site",
+    "zip": "",
+    "url": "",
+    "child": {},
+    "purchase_code": "",
+    "options": {
+      "options": {},
+      "mods": {}
+    }
+  },
   "branding": {
     "logo": "logo.svg",
     "favicon": "logo.svg",

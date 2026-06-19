@@ -42,6 +42,12 @@ if ( ! is_array( $config ) ) {
 	return;
 }
 
+// The hero/sections/brand-color theme mods only apply to the bundled theme.
+// For premium/pre-built themes (BeTheme, etc.) those come from the demo import,
+// so we skip them but still handle identity, media, generic options and content.
+$is_builtin = ( 'ai-site' === get_stylesheet() );
+$cli( 'Active theme: ' . get_stylesheet() . ( $is_builtin ? ' (built-in)' : ' (external/pre-built)' ) );
+
 /* -------------------------------------------------------------------------
  * 1. Media import (filename => ['id' => .., 'url' => ..])
  * ---------------------------------------------------------------------- */
@@ -141,7 +147,7 @@ if ( isset( $site['tagline'] ) ) {
  * 3. Branding -> theme mods + custom logo
  * ---------------------------------------------------------------------- */
 $branding = isset( $config['branding'] ) ? $config['branding'] : array();
-if ( ! empty( $branding['colors'] ) ) {
+if ( $is_builtin && ! empty( $branding['colors'] ) ) {
 	$colors = $branding['colors'];
 	foreach ( array( 'primary', 'accent', 'text', 'background' ) as $c ) {
 		if ( ! empty( $colors[ $c ] ) ) {
@@ -150,10 +156,10 @@ if ( ! empty( $branding['colors'] ) ) {
 		}
 	}
 }
-if ( ! empty( $branding['fonts']['heading'] ) ) {
+if ( $is_builtin && ! empty( $branding['fonts']['heading'] ) ) {
 	set_theme_mod( 'ai_site_font_heading', $branding['fonts']['heading'] );
 }
-if ( ! empty( $branding['fonts']['body'] ) ) {
+if ( $is_builtin && ! empty( $branding['fonts']['body'] ) ) {
 	set_theme_mod( 'ai_site_font_body', $branding['fonts']['body'] );
 }
 if ( ! empty( $branding['logo'] ) ) {
@@ -173,7 +179,7 @@ if ( ! empty( $branding['favicon'] ) ) {
  * 4. Hero + contact -> theme mods
  * ---------------------------------------------------------------------- */
 $hero = isset( $config['hero'] ) ? $config['hero'] : array();
-if ( $hero ) {
+if ( $is_builtin && $hero ) {
 	set_theme_mod( 'ai_site_hero_heading', isset( $hero['heading'] ) ? $hero['heading'] : '' );
 	set_theme_mod( 'ai_site_hero_subheading', isset( $hero['subheading'] ) ? $hero['subheading'] : '' );
 	if ( ! empty( $hero['image'] ) ) {
@@ -189,7 +195,7 @@ if ( $hero ) {
 }
 
 $contact = isset( $config['contact'] ) ? $config['contact'] : array();
-if ( $contact ) {
+if ( $is_builtin && $contact ) {
 	set_theme_mod( 'ai_site_contact_email', isset( $contact['email'] ) ? $contact['email'] : '' );
 	set_theme_mod( 'ai_site_contact_phone', isset( $contact['phone'] ) ? $contact['phone'] : '' );
 	set_theme_mod( 'ai_site_contact_address', isset( $contact['address'] ) ? $contact['address'] : '' );
@@ -205,6 +211,7 @@ if ( $contact ) {
  * 5. Sections -> resolve image filenames to URLs, store as JSON theme mod
  * ---------------------------------------------------------------------- */
 $sections = isset( $config['sections'] ) && is_array( $config['sections'] ) ? $config['sections'] : array();
+if ( $is_builtin && $sections ) {
 foreach ( $sections as &$section ) {
 	if ( ! empty( $section['image'] ) ) {
 		$im = $import_image( $section['image'] );
@@ -223,6 +230,39 @@ foreach ( $sections as &$section ) {
 }
 unset( $section );
 set_theme_mod( 'ai_site_sections_json', wp_json_encode( $sections ) );
+}
+
+/* -------------------------------------------------------------------------
+ * 5b. Generic theme options/mods (applied for ANY theme) + import options
+ * ---------------------------------------------------------------------- */
+$theme_cfg = isset( $config['theme'] ) ? $config['theme'] : array();
+if ( ! empty( $theme_cfg['options']['options'] ) && is_array( $theme_cfg['options']['options'] ) ) {
+	foreach ( $theme_cfg['options']['options'] as $name => $value ) {
+		update_option( $name, $value );
+		$cli( "Set option: $name" );
+	}
+}
+if ( ! empty( $theme_cfg['options']['mods'] ) && is_array( $theme_cfg['options']['mods'] ) ) {
+	foreach ( $theme_cfg['options']['mods'] as $name => $value ) {
+		set_theme_mod( $name, $value );
+		$cli( "Set theme mod: $name" );
+	}
+}
+
+// Optional: apply a JSON file of wp_options after a demo import.
+$import_cfg = isset( $config['import'] ) ? $config['import'] : array();
+if ( ! empty( $import_cfg['options'] ) ) {
+	$opts_file = '/site-config/import/' . $import_cfg['options'];
+	if ( file_exists( $opts_file ) ) {
+		$opts = json_decode( (string) file_get_contents( $opts_file ), true );
+		if ( is_array( $opts ) ) {
+			foreach ( $opts as $name => $value ) {
+				update_option( $name, $value );
+			}
+			$cli( 'Applied imported options from ' . $import_cfg['options'] );
+		}
+	}
+}
 
 /* -------------------------------------------------------------------------
  * 6. Pages (idempotent by slug)
@@ -265,13 +305,12 @@ foreach ( $pages as $page ) {
 	}
 }
 
-// Ensure a blog/posts page so the post archive stays reachable.
-$blog_id = $upsert_page( 'blog', __( 'Blog', 'ai-site' ), '' );
-
 /* -------------------------------------------------------------------------
- * 7. Static front page configuration
+ * 7. Static front page configuration (only when config defines a front page)
  * ---------------------------------------------------------------------- */
 if ( $front_page_id ) {
+	// Ensure a blog/posts page so the post archive stays reachable.
+	$blog_id = $upsert_page( 'blog', __( 'Blog', 'ai-site' ), '' );
 	update_option( 'show_on_front', 'page' );
 	update_option( 'page_on_front', $front_page_id );
 	if ( $blog_id && $blog_id !== $front_page_id ) {
@@ -371,5 +410,20 @@ foreach ( $menus as $menu_key => $items ) {
 	$cli( "Built menu: $menu_name" );
 }
 set_theme_mod( 'nav_menu_locations', $nav_locations );
+
+// Assign imported menus (by name) to theme locations, e.g. a BeTheme demo's menu.
+if ( ! empty( $import_cfg['menus'] ) && is_array( $import_cfg['menus'] ) ) {
+	$nav_locations = get_theme_mod( 'nav_menu_locations', array() );
+	foreach ( $import_cfg['menus'] as $location => $menu_name ) {
+		$menu = wp_get_nav_menu_object( $menu_name );
+		if ( $menu ) {
+			$nav_locations[ $location ] = $menu->term_id;
+			$cli( "Assigned imported menu '$menu_name' to location '$location'" );
+		} else {
+			$cli( "Imported menu not found: $menu_name" );
+		}
+	}
+	set_theme_mod( 'nav_menu_locations', $nav_locations );
+}
 
 $cli( 'Content provisioning complete.' );

@@ -2,24 +2,29 @@
 #
 # Provisioning entrypoint. Runs inside the wp-cli container.
 #
-# 1. Waits for WordPress core files / DB to be ready.
-# 2. Installs WordPress (idempotent).
-# 3. Activates the AI Site theme.
-# 4. Installs configured plugins.
-# 5. Hands off to provision.php for the content-heavy work (media, pages,
-#    menus, theme mods, posts) via `wp eval-file`.
+# Phases:
+#   1. Wait for WordPress core files / DB to be ready.
+#   2. Install WordPress core (idempotent).
+#   3. (setup phase ends here if AI_SETUP_ONLY=1 — you pick the theme next)
+#   4. Install & activate the chosen theme (builtin / wordpress.org / zip / url).
+#   5. Install & activate plugins (wordpress.org slugs and/or premium zips/urls).
+#   6. Import a pre-built / demo website (WXR content, widgets, customizer, options).
+#   7. Hand off to provision.php for config-driven content & branding.
 #
 set -euo pipefail
 
 CONFIG="/site-config/site.json"
 PHP_PROVISIONER="/scripts/provision.php"
+THEMES_DIR="/site-config/themes"
+PLUGINS_DIR="/site-config/plugins"
+IMPORT_DIR="/site-config/import"
 
 log() { printf '\033[0;36m[provision]\033[0m %s\n' "$*"; }
 err() { printf '\033[0;31m[provision:error]\033[0m %s\n' "$*" >&2; }
 
 wp() { command wp --path=/var/www/html --allow-root "$@"; }
 
-# Read a value out of the JSON config using PHP (no jq dependency).
+# Read a scalar value out of the JSON config using PHP (no jq dependency).
 cfg() {
   php -r '$c=json_decode(file_get_contents($argv[1]),true); $keys=array_slice($argv,2); $v=$c; foreach($keys as $k){ if(is_array($v)&&array_key_exists($k,$v)){$v=$v[$k];}else{$v="";break;} } if(is_array($v)){echo "";}else{echo $v;}' "$CONFIG" "$@"
 }
@@ -81,22 +86,127 @@ TZ_STRING="$(cfg site timezone)"
 log "Enabling pretty permalinks."
 wp rewrite structure '/%postname%/' --hard >/dev/null 2>&1 || true
 
-# --- Activate theme ---
-log "Activating ai-site theme."
-wp theme activate ai-site
-
-# --- Install configured plugins ---
-PLUGIN_COUNT="$(php -r '$c=json_decode(file_get_contents($argv[1]),true); echo isset($c["plugins"])&&is_array($c["plugins"])?count($c["plugins"]):0;' "$CONFIG")"
-if [[ "$PLUGIN_COUNT" -gt 0 ]]; then
-  while IFS= read -r plugin; do
-    [[ -z "$plugin" ]] && continue
-    log "Installing plugin: $plugin"
-    wp plugin install "$plugin" --activate >/dev/null 2>&1 || err "Could not install plugin $plugin (continuing)."
-  done < <(php -r '$c=json_decode(file_get_contents($argv[1]),true); foreach(($c["plugins"]??[]) as $p){echo $p,"\n";}' "$CONFIG")
+# --- SETUP-ONLY phase: stop here so the user can choose a theme ---
+if [[ "${AI_SETUP_ONLY:-0}" == "1" ]]; then
+  log "Setup-only mode: WordPress is installed and ready."
+  log "Choose a theme (edit site.json 'theme' block, or pick one in wp-admin),"
+  log "then run ./scripts/build.sh to build the rest of the site."
+  log "Admin: $SITE_URL/wp-admin  (user: $ADMIN_USER)"
+  exit 0
 fi
 
-# --- Content, media, menus, theme mods (PHP) ---
-log "Applying site content from config..."
+# --- Install & activate the chosen theme ------------------------------------
+install_theme() {
+  # args: source slug zip url
+  local source="$1" slug="$2" zip="$3" url="$4"
+  case "$source" in
+    ""|builtin)
+      log "Activating built-in theme: ${slug:-ai-site}"
+      wp theme activate "${slug:-ai-site}"
+      ;;
+    wporg)
+      log "Installing theme from wordpress.org: $slug"
+      wp theme install "$slug" --activate --force
+      ;;
+    zip)
+      if [[ -f "$THEMES_DIR/$zip" ]]; then
+        log "Installing theme from zip: $zip"
+        wp theme install "$THEMES_DIR/$zip" --activate --force
+      else
+        err "Theme zip not found: $THEMES_DIR/$zip"
+        return 1
+      fi
+      ;;
+    url)
+      log "Installing theme from URL: $url"
+      wp theme install "$url" --activate --force
+      ;;
+    *)
+      err "Unknown theme source: $source"
+      return 1
+      ;;
+  esac
+}
+
+THEME_SOURCE="$(cfg theme source)"
+THEME_SLUG="$(cfg theme slug)"
+THEME_ZIP="$(cfg theme zip)"
+THEME_URL="$(cfg theme url)"
+# Default to builtin if no theme configured at all.
+[[ -z "$THEME_SOURCE" && -z "$THEME_SLUG" ]] && THEME_SOURCE="builtin"
+install_theme "$THEME_SOURCE" "$THEME_SLUG" "$THEME_ZIP" "$THEME_URL"
+
+# Optional child theme (activated instead of the parent).
+CHILD_SOURCE="$(cfg theme child source)"
+if [[ -n "$CHILD_SOURCE" ]]; then
+  install_theme "$CHILD_SOURCE" "$(cfg theme child slug)" "$(cfg theme child zip)" "$(cfg theme child url)"
+fi
+
+# --- Install & activate plugins ---------------------------------------------
+# Emit "source|slug|ref" lines (ref = zip filename or url).
+plugin_lines() {
+  php -r '
+    $c=json_decode(file_get_contents($argv[1]),true);
+    foreach(($c["plugins"]??[]) as $p){
+      if(is_string($p)){ echo "wporg|$p|\n"; continue; }
+      $src=$p["source"]??"wporg"; $slug=$p["slug"]??""; $ref=$p["zip"]??($p["url"]??"");
+      echo "$src|$slug|$ref\n";
+    }' "$CONFIG"
+}
+
+while IFS='|' read -r psrc pslug pref; do
+  [[ -z "$psrc" ]] && continue
+  case "$psrc" in
+    wporg)
+      log "Installing plugin (wordpress.org): $pslug"
+      wp plugin install "$pslug" --activate --force >/dev/null 2>&1 || err "Could not install plugin $pslug (continuing)."
+      ;;
+    zip)
+      if [[ -f "$PLUGINS_DIR/$pref" ]]; then
+        log "Installing plugin (zip): $pref"
+        wp plugin install "$PLUGINS_DIR/$pref" --activate --force >/dev/null 2>&1 || err "Could not install plugin zip $pref (continuing)."
+      else
+        err "Plugin zip not found: $PLUGINS_DIR/$pref (continuing)."
+      fi
+      ;;
+    url)
+      log "Installing plugin (url): $pref"
+      wp plugin install "$pref" --activate --force >/dev/null 2>&1 || err "Could not install plugin url $pref (continuing)."
+      ;;
+  esac
+done < <(plugin_lines)
+
+# --- Import a pre-built / demo website --------------------------------------
+IMPORT_CONTENT="$(cfg import content)"
+if [[ -n "$IMPORT_CONTENT" ]]; then
+  if [[ -f "$IMPORT_DIR/$IMPORT_CONTENT" ]]; then
+    log "Importing demo content: $IMPORT_CONTENT"
+    wp plugin is-installed wordpress-importer >/dev/null 2>&1 || wp plugin install wordpress-importer --activate >/dev/null 2>&1 || true
+    wp plugin activate wordpress-importer >/dev/null 2>&1 || true
+    AUTHORS="$(cfg import authors)"; [[ -z "$AUTHORS" ]] && AUTHORS="create"
+    wp import "$IMPORT_DIR/$IMPORT_CONTENT" --authors="$AUTHORS" || err "Content import reported errors (continuing)."
+  else
+    err "Import content file not found: $IMPORT_DIR/$IMPORT_CONTENT"
+  fi
+fi
+
+IMPORT_WIDGETS="$(cfg import widgets)"
+if [[ -n "$IMPORT_WIDGETS" && -f "$IMPORT_DIR/$IMPORT_WIDGETS" ]]; then
+  if wp plugin install widget-importer-exporter --activate >/dev/null 2>&1; then
+    log "Importing widgets: $IMPORT_WIDGETS"
+    wp widget-importer-exporter import "$IMPORT_DIR/$IMPORT_WIDGETS" >/dev/null 2>&1 \
+      || wp wie import "$IMPORT_DIR/$IMPORT_WIDGETS" >/dev/null 2>&1 \
+      || err "Widget import not available via WP-CLI (import manually in wp-admin)."
+  fi
+fi
+
+IMPORT_CUSTOMIZER="$(cfg import customizer)"
+if [[ -n "$IMPORT_CUSTOMIZER" && -f "$IMPORT_DIR/$IMPORT_CUSTOMIZER" ]]; then
+  log "Customizer export detected ($IMPORT_CUSTOMIZER). Install 'Customizer Export/Import' and import it from wp-admin if not applied automatically."
+fi
+
+# --- Content, media, menus, theme mods, generic options (PHP) ---------------
+log "Applying site content & settings from config..."
 wp eval-file "$PHP_PROVISIONER"
 
 # --- Flush rewrite rules so pages resolve ---

@@ -24,6 +24,55 @@
         }
       }
     },
+    "theme": {
+      "type": "object",
+      "description": "Which theme to install and activate. Supports the built-in theme, wordpress.org themes, or premium themes (BeTheme, etc.) supplied as a zip or URL.",
+      "properties": {
+        "source": {
+          "type": "string",
+          "enum": ["builtin", "wporg", "zip", "url"],
+          "description": "builtin = bundled ai-site theme; wporg = wordpress.org slug; zip = file in site-config/themes/; url = remote zip URL"
+        },
+        "slug": { "type": "string", "description": "Theme directory/slug used to activate it (e.g. 'betheme')" },
+        "zip": { "type": "string", "description": "Zip filename inside site-config/themes/ (source=zip)" },
+        "url": { "type": "string", "description": "Remote zip URL (source=url)" },
+        "child": {
+          "type": "object",
+          "description": "Optional child theme (same fields as a theme source). Activated instead of the parent when present.",
+          "properties": {
+            "source": { "type": "string", "enum": ["wporg", "zip", "url"] },
+            "slug": { "type": "string" },
+            "zip": { "type": "string" },
+            "url": { "type": "string" }
+          }
+        },
+        "purchase_code": { "type": "string", "description": "Optional license/purchase code (set via theme.options for the theme's registration option)" },
+        "options": {
+          "type": "object",
+          "description": "Generic theme settings applied for ANY theme.",
+          "properties": {
+            "options": { "type": "object", "description": "wp_options name => value pairs" },
+            "mods": { "type": "object", "description": "theme_mod name => value pairs" }
+          }
+        }
+      }
+    },
+    "import": {
+      "type": "object",
+      "description": "Import a pre-built / demo website (content + widgets + settings). Files live in site-config/import/.",
+      "properties": {
+        "content": { "type": "string", "description": "WordPress eXtended RSS (WXR/XML) export filename (uses the wordpress-importer plugin)" },
+        "authors": { "type": "string", "enum": ["create", "skip"], "description": "How to map post authors during import (default: create)" },
+        "widgets": { "type": "string", "description": "Widget Importer/Exporter .wie/.json filename" },
+        "customizer": { "type": "string", "description": "Customizer Export/Import .dat filename" },
+        "options": { "type": "string", "description": "JSON file of wp_options name => value pairs to set after import" },
+        "menus": {
+          "type": "object",
+          "description": "Assign imported menus (by menu name) to theme locations, e.g. { \"primary\": \"Main Menu\" }",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
     "branding": {
       "type": "object",
       "properties": {
@@ -121,7 +170,21 @@
     },
     "plugins": {
       "type": "array",
-      "items": { "type": "string", "description": "Plugin slug from wordpress.org" }
+      "description": "Plugins to install & activate. Each entry is either a wordpress.org slug (string) or an object for premium/remote plugins.",
+      "items": {
+        "oneOf": [
+          { "type": "string", "description": "wordpress.org plugin slug" },
+          {
+            "type": "object",
+            "properties": {
+              "source": { "type": "string", "enum": ["wporg", "zip", "url"] },
+              "slug": { "type": "string" },
+              "zip": { "type": "string", "description": "Zip filename inside site-config/plugins/ (source=zip)" },
+              "url": { "type": "string", "description": "Remote zip URL (source=url)" }
+            }
+          }
+        ]
+      }
     }
   },
   "definitions": {

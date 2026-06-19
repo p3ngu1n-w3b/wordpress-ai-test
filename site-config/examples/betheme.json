@@ -1,0 +1,52 @@
+{
+  "$schema": "../../docs/site-config.schema.json",
+  "_comment": "Example for building a site on a PRE-BUILT premium theme (BeTheme). Copy this over site-config/site.json, drop betheme.zip into site-config/themes/, its bundled plugin zips into site-config/plugins/, and the demo export into site-config/import/. Then run ./scripts/build.sh. Premium binaries are git-ignored and never committed.",
+
+  "site": {
+    "title": "My BeTheme Site",
+    "tagline": "Built on a pre-built BeTheme layout",
+    "language": "en_US",
+    "timezone": "UTC",
+    "url": "http://localhost:8080",
+    "admin": { "user": "admin", "email": "admin@example.com" }
+  },
+
+  "theme": {
+    "source": "zip",
+    "slug": "betheme",
+    "zip": "betheme.zip",
+    "child": {
+      "source": "zip",
+      "slug": "betheme-child",
+      "zip": "betheme-child.zip"
+    },
+    "purchase_code": "",
+    "options": {
+      "options": {},
+      "mods": {}
+    }
+  },
+
+  "branding": {
+    "logo": "logo.svg"
+  },
+
+  "plugins": [
+    "wordpress-importer",
+    { "source": "zip", "slug": "js_composer", "zip": "js_composer.zip" },
+    { "source": "zip", "slug": "revslider", "zip": "revslider.zip" }
+  ],
+
+  "import": {
+    "content": "demo-content.xml",
+    "authors": "create",
+    "widgets": "widgets.wie",
+    "customizer": "customizer.dat",
+    "options": "theme-options.json",
+    "menus": { "primary": "Main Menu", "footer": "Footer Menu" }
+  },
+
+  "pages": [],
+  "menus": {},
+  "posts": []
+}

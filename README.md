@@ -12,6 +12,11 @@ editor, plugins, users, comments, REST API, and themes all work exactly as they
 do on any WordPress site. The automation only *populates* WordPress; it never
 replaces it.
 
+You can build on the **bundled `ai-site` theme** or on a **pre-built premium
+theme such as [BeTheme](https://themes.muffingroup.com/betheme/)** — including
+importing one of its pre-built demo websites. See
+[Using a pre-built / premium theme](#using-a-pre-built--premium-theme-eg-betheme).
+
 ---
 
 ## How it works
@@ -86,7 +91,9 @@ Key sections:
 | Key         | What it controls |
 |-------------|------------------|
 | `site`      | Title, tagline, language, timezone, URL, admin account |
-| `branding`  | Logo/favicon filenames, brand colors, fonts |
+| `theme`     | Which theme to install/activate: built-in, wordpress.org, or premium zip/URL (+ child theme & generic options) |
+| `import`    | Import a pre-built/demo website: WXR content, widgets, customizer, options, menu assignment |
+| `branding`  | Logo/favicon filenames, brand colors, fonts (colors/fonts apply to the built-in theme) |
 | `contact`   | Email, phone, address, social links (shown in footer) |
 | `hero`      | Front-page hero heading, subheading, image, CTA buttons |
 | `sections`  | Front-page content blocks: `features`, `about`, `gallery`, `cta` |
@@ -126,7 +133,85 @@ enabled by the theme).
 
 ---
 
-## The theme (`theme/ai-site/`)
+## Using a pre-built / premium theme (e.g. BeTheme)
+
+The toolkit is theme-agnostic. The recommended flow matches "AI sets up
+WordPress → you pick the theme → automation builds the rest":
+
+### 1. Let the AI set up WordPress
+
+```bash
+./scripts/build.sh --setup-only
+```
+
+This installs and configures a clean WordPress (core, admin user, pretty
+permalinks) and then stops — no theme or content yet.
+
+### 2. Choose your theme
+
+Point the `theme` block in `site-config/site.json` at the theme you want. The
+`source` can be:
+
+| `source`  | Use it for | Required fields |
+|-----------|------------|-----------------|
+| `builtin` | The bundled `ai-site` theme | `slug: "ai-site"` |
+| `wporg`   | A free wordpress.org theme | `slug` (e.g. `astra`) |
+| `zip`     | A premium theme zip you own | `slug`, `zip` (file in `site-config/themes/`) |
+| `url`     | A theme zip hosted at a URL | `slug`, `url` |
+
+For **BeTheme** (a premium theme), copy the ready-made example and drop in your
+licensed files:
+
+```bash
+cp site-config/examples/betheme.json site-config/site.json
+
+# Premium binaries you own (git-ignored, never committed):
+#   site-config/themes/betheme.zip          (+ betheme-child.zip)
+#   site-config/plugins/js_composer.zip      (bundled page builder, etc.)
+#   site-config/plugins/revslider.zip
+#   site-config/import/demo-content.xml      (a pre-built website export)
+```
+
+Plugins accept either a wordpress.org slug (string) or an object for premium
+zips/URLs:
+
+```json
+"plugins": [
+  "contact-form-7",
+  { "source": "zip", "slug": "js_composer", "zip": "js_composer.zip" },
+  { "source": "url", "slug": "revslider", "url": "https://example.com/revslider.zip" }
+]
+```
+
+### 3. Run the automated build
+
+```bash
+./scripts/build.sh
+```
+
+This installs the theme (and child theme), installs/activates the plugins, then
+imports the pre-built website defined under `import` (content via the WordPress
+importer, plus optional widgets/customizer/options and menu assignment) and
+applies any generic `theme.options`.
+
+### Getting a pre-built website's import files
+
+Premium demos (including BeTheme's pre-built websites) are imported here in a
+portable, license-respecting way using standard WordPress exports:
+
+1. Install the theme + the demo you like once (locally or on the vendor sandbox).
+2. **Tools → Export → All content** to produce the WXR (`.xml`) file.
+3. Optionally export widgets (*Widget Importer/Exporter*) and theme settings
+   (*Customizer Export/Import*).
+4. Put the files in `site-config/import/` and reference them in `site.json`.
+
+> Premium themes/plugins are licensed; this repo never bundles them. Place your
+> own licensed files in `site-config/themes`, `site-config/plugins`,
+> `site-config/import` — those paths are git-ignored.
+
+---
+
+## The built-in theme (`theme/ai-site/`)
 
 A hand-written, responsive, accessibility-minded classic theme that supports:
 
@@ -167,8 +252,13 @@ site**.
 │   └── provision.php           # WP API: media, pages, menus, posts, branding
 ├── site-config/
 │   ├── site.json               # ← your site definition
-│   └── images/                 # ← your logo & photos
-├── theme/ai-site/              # The generated WordPress theme
+│   ├── images/                 # ← your logo & photos
+│   ├── themes/                 # ← premium theme zips (git-ignored)
+│   ├── plugins/                # ← premium plugin zips (git-ignored)
+│   ├── import/                 # ← pre-built/demo export files (git-ignored)
+│   └── examples/
+│       └── betheme.json        # Ready-to-edit config for the BeTheme flow
+├── theme/ai-site/              # The bundled built-in WordPress theme
 └── docs/
     └── site-config.schema.json # JSON schema for site.json
 ```
@@ -183,6 +273,11 @@ site**.
   WordPress API.
 - **Can I edit content after building?** Yes — log into `/wp-admin` and edit
   pages, posts, menus, and branding (Customizer) like any WordPress site.
+- **Can I use a premium theme like BeTheme?** Yes — set `theme.source` to `zip`
+  (or `url`) and supply your licensed theme/plugin zips and a demo export. See
+  [Using a pre-built / premium theme](#using-a-pre-built--premium-theme-eg-betheme).
+  The toolkit installs the theme + plugins and imports the pre-built website; you
+  own and provide the licensed files (they are never committed).
 - **Production use:** change the admin password and DB credentials in `.env`,
   put the site behind HTTPS, and consider a managed database and object storage
   for uploads. Review/sanitize any SVGs before enabling SVG uploads on a public,
