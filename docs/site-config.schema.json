@@ -1,0 +1,136 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AI WordPress Site Config",
+  "description": "Single source of truth that drives the automated WordPress build.",
+  "type": "object",
+  "required": ["site"],
+  "additionalProperties": true,
+  "properties": {
+    "site": {
+      "type": "object",
+      "required": ["title"],
+      "properties": {
+        "title": { "type": "string" },
+        "tagline": { "type": "string" },
+        "language": { "type": "string", "description": "WP locale, e.g. en_US" },
+        "timezone": { "type": "string" },
+        "url": { "type": "string", "description": "Public site URL" },
+        "admin": {
+          "type": "object",
+          "properties": {
+            "user": { "type": "string" },
+            "email": { "type": "string", "format": "email" }
+          }
+        }
+      }
+    },
+    "branding": {
+      "type": "object",
+      "properties": {
+        "logo": { "type": "string", "description": "Filename inside site-config/images" },
+        "favicon": { "type": "string" },
+        "colors": {
+          "type": "object",
+          "properties": {
+            "primary": { "type": "string" },
+            "accent": { "type": "string" },
+            "text": { "type": "string" },
+            "background": { "type": "string" }
+          }
+        },
+        "fonts": {
+          "type": "object",
+          "properties": {
+            "heading": { "type": "string" },
+            "body": { "type": "string" }
+          }
+        }
+      }
+    },
+    "contact": {
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "social": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+    "hero": {
+      "type": "object",
+      "properties": {
+        "heading": { "type": "string" },
+        "subheading": { "type": "string" },
+        "image": { "type": "string" },
+        "cta": { "$ref": "#/definitions/link" },
+        "secondary_cta": { "$ref": "#/definitions/link" }
+      }
+    },
+    "sections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type"],
+        "properties": {
+          "type": { "type": "string", "enum": ["features", "about", "gallery", "cta"] }
+        }
+      }
+    },
+    "pages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["slug", "title"],
+        "properties": {
+          "slug": { "type": "string" },
+          "title": { "type": "string" },
+          "content": { "type": "string" },
+          "front_page": { "type": "boolean" },
+          "template": { "type": "string" }
+        }
+      }
+    },
+    "menus": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "title": { "type": "string" },
+            "page": { "type": "string", "description": "Page slug to link to" },
+            "url": { "type": "string", "description": "Explicit URL (overrides page)" }
+          }
+        }
+      }
+    },
+    "posts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["title"],
+        "properties": {
+          "title": { "type": "string" },
+          "content": { "type": "string" },
+          "category": { "type": "string" }
+        }
+      }
+    },
+    "plugins": {
+      "type": "array",
+      "items": { "type": "string", "description": "Plugin slug from wordpress.org" }
+    }
+  },
+  "definitions": {
+    "link": {
+      "type": "object",
+      "properties": {
+        "label": { "type": "string" },
+        "url": { "type": "string" }
+      }
+    }
+  }
+}

@@ -1,0 +1,11 @@
+# Local environment overrides
+.env
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.swp
+
+# Docker volume dumps / local artifacts
+/wp-data/
+/db-data/

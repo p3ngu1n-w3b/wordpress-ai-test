@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="600" viewBox="0 0 900 600" role="img" aria-label="About image">
+  <rect width="900" height="600" fill="#fffaf3"/>
+  <rect x="60" y="60" width="780" height="480" rx="16" fill="#6f4e37" opacity="0.1"/>
+  <circle cx="300" cy="300" r="120" fill="#6f4e37"/>
+  <circle cx="600" cy="300" r="120" fill="#e0a458"/>
+  <text x="450" y="540" text-anchor="middle" font-family="Georgia, serif" font-size="32" fill="#2b2b2b">Our Roastery</text>
+</svg>
