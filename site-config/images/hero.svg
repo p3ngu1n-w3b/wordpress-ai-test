@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700" viewBox="0 0 1200 700" role="img" aria-label="Hero image">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6f4e37"/>
+      <stop offset="1" stop-color="#2b2b2b"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="700" fill="url(#g)"/>
+  <circle cx="600" cy="350" r="160" fill="#e0a458" opacity="0.9"/>
+  <path d="M520 300 q80 -120 160 0 q-80 120 -160 0 Z" fill="#fffaf3"/>
+  <text x="600" y="620" text-anchor="middle" font-family="Georgia, serif" font-size="42" fill="#fffaf3">Freshly Roasted</text>
+</svg>

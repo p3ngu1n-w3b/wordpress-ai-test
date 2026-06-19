@@ -1,0 +1,199 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AI WordPress Site Config",
+  "description": "Single source of truth that drives the automated WordPress build.",
+  "type": "object",
+  "required": ["site"],
+  "additionalProperties": true,
+  "properties": {
+    "site": {
+      "type": "object",
+      "required": ["title"],
+      "properties": {
+        "title": { "type": "string" },
+        "tagline": { "type": "string" },
+        "language": { "type": "string", "description": "WP locale, e.g. en_US" },
+        "timezone": { "type": "string" },
+        "url": { "type": "string", "description": "Public site URL" },
+        "admin": {
+          "type": "object",
+          "properties": {
+            "user": { "type": "string" },
+            "email": { "type": "string", "format": "email" }
+          }
+        }
+      }
+    },
+    "theme": {
+      "type": "object",
+      "description": "Which theme to install and activate. Supports the built-in theme, wordpress.org themes, or premium themes (BeTheme, etc.) supplied as a zip or URL.",
+      "properties": {
+        "source": {
+          "type": "string",
+          "enum": ["builtin", "wporg", "zip", "url"],
+          "description": "builtin = bundled ai-site theme; wporg = wordpress.org slug; zip = file in site-config/themes/; url = remote zip URL"
+        },
+        "slug": { "type": "string", "description": "Theme directory/slug used to activate it (e.g. 'betheme')" },
+        "zip": { "type": "string", "description": "Zip filename inside site-config/themes/ (source=zip)" },
+        "url": { "type": "string", "description": "Remote zip URL (source=url)" },
+        "child": {
+          "type": "object",
+          "description": "Optional child theme (same fields as a theme source). Activated instead of the parent when present.",
+          "properties": {
+            "source": { "type": "string", "enum": ["wporg", "zip", "url"] },
+            "slug": { "type": "string" },
+            "zip": { "type": "string" },
+            "url": { "type": "string" }
+          }
+        },
+        "purchase_code": { "type": "string", "description": "Optional license/purchase code (set via theme.options for the theme's registration option)" },
+        "options": {
+          "type": "object",
+          "description": "Generic theme settings applied for ANY theme.",
+          "properties": {
+            "options": { "type": "object", "description": "wp_options name => value pairs" },
+            "mods": { "type": "object", "description": "theme_mod name => value pairs" }
+          }
+        }
+      }
+    },
+    "import": {
+      "type": "object",
+      "description": "Import a pre-built / demo website (content + widgets + settings). Files live in site-config/import/.",
+      "properties": {
+        "content": { "type": "string", "description": "WordPress eXtended RSS (WXR/XML) export filename (uses the wordpress-importer plugin)" },
+        "authors": { "type": "string", "enum": ["create", "skip"], "description": "How to map post authors during import (default: create)" },
+        "widgets": { "type": "string", "description": "Widget Importer/Exporter .wie/.json filename" },
+        "customizer": { "type": "string", "description": "Customizer Export/Import .dat filename" },
+        "options": { "type": "string", "description": "JSON file of wp_options name => value pairs to set after import" },
+        "menus": {
+          "type": "object",
+          "description": "Assign imported menus (by menu name) to theme locations, e.g. { \"primary\": \"Main Menu\" }",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+    "branding": {
+      "type": "object",
+      "properties": {
+        "logo": { "type": "string", "description": "Filename inside site-config/images" },
+        "favicon": { "type": "string" },
+        "colors": {
+          "type": "object",
+          "properties": {
+            "primary": { "type": "string" },
+            "accent": { "type": "string" },
+            "text": { "type": "string" },
+            "background": { "type": "string" }
+          }
+        },
+        "fonts": {
+          "type": "object",
+          "properties": {
+            "heading": { "type": "string" },
+            "body": { "type": "string" }
+          }
+        }
+      }
+    },
+    "contact": {
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "social": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+    "hero": {
+      "type": "object",
+      "properties": {
+        "heading": { "type": "string" },
+        "subheading": { "type": "string" },
+        "image": { "type": "string" },
+        "cta": { "$ref": "#/definitions/link" },
+        "secondary_cta": { "$ref": "#/definitions/link" }
+      }
+    },
+    "sections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type"],
+        "properties": {
+          "type": { "type": "string", "enum": ["features", "about", "gallery", "cta"] }
+        }
+      }
+    },
+    "pages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["slug", "title"],
+        "properties": {
+          "slug": { "type": "string" },
+          "title": { "type": "string" },
+          "content": { "type": "string" },
+          "front_page": { "type": "boolean" },
+          "template": { "type": "string" }
+        }
+      }
+    },
+    "menus": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "title": { "type": "string" },
+            "page": { "type": "string", "description": "Page slug to link to" },
+            "url": { "type": "string", "description": "Explicit URL (overrides page)" }
+          }
+        }
+      }
+    },
+    "posts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["title"],
+        "properties": {
+          "title": { "type": "string" },
+          "content": { "type": "string" },
+          "category": { "type": "string" }
+        }
+      }
+    },
+    "plugins": {
+      "type": "array",
+      "description": "Plugins to install & activate. Each entry is either a wordpress.org slug (string) or an object for premium/remote plugins.",
+      "items": {
+        "oneOf": [
+          { "type": "string", "description": "wordpress.org plugin slug" },
+          {
+            "type": "object",
+            "properties": {
+              "source": { "type": "string", "enum": ["wporg", "zip", "url"] },
+              "slug": { "type": "string" },
+              "zip": { "type": "string", "description": "Zip filename inside site-config/plugins/ (source=zip)" },
+              "url": { "type": "string", "description": "Remote zip URL (source=url)" }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "link": {
+      "type": "object",
+      "properties": {
+        "label": { "type": "string" },
+        "url": { "type": "string" }
+      }
+    }
+  }
+}

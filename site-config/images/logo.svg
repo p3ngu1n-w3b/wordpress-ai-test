@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="60" viewBox="0 0 200 60" role="img" aria-label="Acme Coffee Roasters logo">
+  <rect width="200" height="60" fill="none"/>
+  <circle cx="30" cy="30" r="18" fill="#6f4e37"/>
+  <path d="M22 24 q8 -10 16 0 q-8 10 -16 0 Z" fill="#e0a458"/>
+  <text x="58" y="28" font-family="Georgia, serif" font-size="18" font-weight="700" fill="#6f4e37">Acme</text>
+  <text x="58" y="46" font-family="Georgia, serif" font-size="12" fill="#2b2b2b">Coffee Roasters</text>
+</svg>

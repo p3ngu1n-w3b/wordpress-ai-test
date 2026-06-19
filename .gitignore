@@ -1,0 +1,19 @@
+# Local environment overrides
+.env
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.swp
+
+# Docker volume dumps / local artifacts
+/wp-data/
+/db-data/
+
+# Premium/licensed theme & plugin binaries and demo exports (keep the READMEs)
+site-config/themes/*
+site-config/plugins/*
+site-config/import/*
+!site-config/themes/README.md
+!site-config/plugins/README.md
+!site-config/import/README.md
