@@ -33,9 +33,11 @@ captures non-obvious, durable caveats for running it in the cloud VM.
  deploy` (via `npx netlify-cli`). Needs Netlify auth (`NETLIFY_AUTH_TOKEN` or
  `npx netlify login`) and a linked site (`npx netlify link`/`init`).
 - `netlify.toml` sets `publish = "dist"` with **no** build command (Netlify's CI
- has no Docker/PHP). `dist/` is git-ignored.
-- Changing the published site = edit `site-config/site.json`/theme, then re-run
- `./scripts/deploy.sh --prod` (re-export overwrites `dist/`).
+ has no Docker/PHP). `dist/` is **committed** (NOT git-ignored) so Git-based
+ Netlify deploys have a folder to publish — never add a Netlify build command.
+- Changing the published site = edit `site-config/site.json`/theme, regenerate
+ `dist/` (`./scripts/build.sh && ./scripts/export.sh`), then commit & push it
+ (Git deploy) or run `./scripts/deploy.sh --prod` (CLI upload).
 - Preview the export with no WordPress running:
  `cd dist && python3 -m http.server 5000`.
 

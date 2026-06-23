@@ -59,7 +59,7 @@ wget \
   --adjust-extension \
   --no-host-directories \
   --restrict-file-names=windows \
-  --reject-regex='(/wp-json|/wp-admin|/wp-login|xmlrpc|/feed|trackback|replytocom)' \
+  --reject-regex='(/wp-json|/wp-admin|/wp-login|xmlrpc|/feed|trackback|replytocom|\?p=|\?page_id=|\?attachment_id=|\?author=|\?s=)' \
   -e robots=off \
   --directory-prefix="${OUT_DIR}" \
   "${SRC}/" || true
