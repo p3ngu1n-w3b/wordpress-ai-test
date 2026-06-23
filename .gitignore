@@ -10,6 +10,10 @@ Thumbs.db
 /wp-data/
 /db-data/
 
+# Generated static export of the site (deployed to Netlify via scripts/deploy.sh)
+/dist/
+.netlify/
+
 # Premium/licensed theme & plugin binaries and demo exports (keep the READMEs)
 site-config/themes/*
 site-config/plugins/*

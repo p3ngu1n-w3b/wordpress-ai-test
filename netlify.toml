@@ -1,0 +1,31 @@
+# Netlify configuration for the static export of the WordPress site.
+#
+# WordPress itself (PHP + MySQL) cannot run on Netlify, so this repo deploys a
+# *static snapshot* of the rendered site that lives in ./dist. Netlify's build
+# image has no Docker/PHP/MySQL, so the snapshot is generated locally and then
+# uploaded — there is no server-side build command here.
+#
+# Typical workflow:
+#   ./scripts/build.sh      # build the WordPress site locally (Docker)
+#   ./scripts/export.sh     # crawl it into ./dist
+#   ./scripts/deploy.sh     # push ./dist to Netlify  (add --prod to go live)
+#
+# To publish a different WordPress build, edit site-config/site.json (or change
+# the theme), then re-run the three steps above (or just ./scripts/deploy.sh).
+
+[build]
+  # Directory containing the static export that gets published to the CDN.
+  publish = "dist"
+  # No build command: the static snapshot is produced locally (see scripts/).
+  command = ""
+
+# Serve clean, directory-style URLs (e.g. /about/ -> /about/index.html).
+[build.processing]
+  skip_processing = false
+
+# Send unknown paths to the exported 404 page when one exists; otherwise
+# Netlify's default 404 is used.
+[[redirects]]
+  from = "/*"
+  to = "/404.html"
+  status = 404

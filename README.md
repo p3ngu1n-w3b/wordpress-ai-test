@@ -133,6 +133,77 @@ enabled by the theme).
 
 ---
 
+## Publishing the site to Netlify
+
+WordPress itself (PHP + MySQL) can't run on Netlify, so the site is published as
+a **static snapshot** of the rendered pages. You build the site locally exactly
+as above, export it to plain HTML/CSS/JS/images, and deploy that snapshot — the
+result looks and behaves like the live site for visitors, and you re-export +
+re-deploy whenever you change the build.
+
+```bash
+# 1. Build the WordPress site locally (Docker)
+./scripts/build.sh
+
+# 2. Crawl the running site into a self-contained ./dist folder
+./scripts/export.sh
+
+# 3. Deploy ./dist to Netlify
+./scripts/deploy.sh          # draft preview URL
+./scripts/deploy.sh --prod   # production URL
+```
+
+`scripts/deploy.sh` runs all three steps for you (build → export → deploy), so
+the everyday command is just:
+
+```bash
+./scripts/deploy.sh --prod
+```
+
+### Previewing the export locally
+
+The export is host-independent (all links are relative / root-relative), so you
+can preview exactly what Netlify will serve:
+
+```bash
+./scripts/export.sh
+cd dist && python3 -m http.server 5000   # then open http://localhost:5000
+```
+
+### Changing to a different / new WordPress build
+
+Because deployment is "build locally → export → upload", switching the published
+site to a different build is just the normal workflow followed by a redeploy:
+
+1. Edit `site-config/site.json` (text, colors, pages…) and/or swap the theme
+   (the `theme` block — built-in, wordpress.org, or a premium zip/URL), and
+   update `site-config/images/` as needed.
+2. Re-run `./scripts/deploy.sh --prod`.
+
+The new snapshot replaces the old one on the **same** Netlify site, so the live
+URL always reflects your latest build. To start from a clean WordPress install
+instead of updating in place, add `--rebuild` to the build step
+(`./scripts/build.sh --rebuild`) before exporting.
+
+### First-time Netlify setup
+
+`scripts/deploy.sh` uses the [Netlify CLI](https://docs.netlify.com/cli/get-started/)
+via `npx`. Before the first deploy, authenticate and link (or create) a site:
+
+```bash
+npx netlify login          # or: export NETLIFY_AUTH_TOKEN=...
+npx netlify link           # connect to an existing site
+# or
+npx netlify init           # create a new Netlify site
+```
+
+Deploy settings live in [`netlify.toml`](netlify.toml) (publish directory =
+`dist`, no server-side build command — the snapshot is produced locally). The
+`dist/` folder is git-ignored; if you prefer Git-based continuous deploys,
+commit `dist/` (or remove it from `.gitignore`) so Netlify publishes it on push.
+
+---
+
 ## Using a pre-built / premium theme (e.g. BeTheme)
 
 The toolkit is theme-agnostic. The recommended flow matches "AI sets up
@@ -245,9 +316,12 @@ site**.
 .
 ├── docker-compose.yml          # MariaDB + WordPress + WP-CLI provisioner
 ├── .env.example                # Ports, DB creds, admin account
+├── netlify.toml                # Netlify config (publishes the static export)
 ├── scripts/
 │   ├── build.sh                # One-command build / rebuild
 │   ├── down.sh                 # Stop the stack
+│   ├── export.sh               # Crawl the live site into ./dist (static)
+│   ├── deploy.sh               # Build + export + deploy to Netlify
 │   ├── provision.sh            # WP-CLI: install core, theme, plugins
 │   └── provision.php           # WP API: media, pages, menus, posts, branding
 ├── site-config/
