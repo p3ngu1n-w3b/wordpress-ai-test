@@ -19,9 +19,27 @@ captures non-obvious, durable caveats for running it in the cloud VM.
 
 ### Running / building (standard commands live in `README.md`)
 - Build + provision: `./scripts/build.sh` (use `--rebuild` to wipe volumes,
-  `--setup-only` to install WordPress without theme/content).
+ `--setup-only` to install WordPress without theme/content).
 - Stop: `./scripts/down.sh` (`--volumes` also deletes the DB/uploads).
 - `build.sh` auto-creates `.env` from `.env.example` if missing.
+
+### Netlify deployment (static export)
+- WordPress (PHP + MySQL) can't run on Netlify, so the site is deployed as a
+ **static snapshot**. The pipeline is: build locally → export → upload.
+- `./scripts/export.sh` crawls the running site (`http://localhost:${WORDPRESS_PORT}`)
+ with `wget` into `./dist/`, rewriting links to be host-independent and
+ capturing the themed 404. Requires the stack to be up (`./scripts/build.sh`).
+- `./scripts/deploy.sh [--prod] [--skip-build]` runs build + export + `netlify
+ deploy` (via `npx netlify-cli`). Needs Netlify auth (`NETLIFY_AUTH_TOKEN` or
+ `npx netlify login`) and a linked site (`npx netlify link`/`init`).
+- `netlify.toml` sets `publish = "dist"` with **no** build command (Netlify's CI
+ has no Docker/PHP). `dist/` is **committed** (NOT git-ignored) so Git-based
+ Netlify deploys have a folder to publish — never add a Netlify build command.
+- Changing the published site = edit `site-config/site.json`/theme, regenerate
+ `dist/` (`./scripts/build.sh && ./scripts/export.sh`), then commit & push it
+ (Git deploy) or run `./scripts/deploy.sh --prod` (CLI upload).
+- Preview the export with no WordPress running:
+ `cd dist && python3 -m http.server 5000`.
 
 ### Lint / tests
 - There is **no automated test suite or linter config**. Validate changes with:

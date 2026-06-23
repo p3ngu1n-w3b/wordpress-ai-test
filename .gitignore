@@ -10,6 +10,13 @@ Thumbs.db
 /wp-data/
 /db-data/
 
+# Netlify CLI local state
+.netlify/
+
+# NOTE: ./dist (the generated static export) is intentionally committed so that
+# Netlify's Git-based deploys have something to publish — WordPress can't build
+# in Netlify's CI. Regenerate it with ./scripts/export.sh and commit the result.
+
 # Premium/licensed theme & plugin binaries and demo exports (keep the READMEs)
 site-config/themes/*
 site-config/plugins/*
